@@ -1,0 +1,7 @@
+{
+  "/page": "app/page.js",
+  "/discagem-direta/page": "app/discagem-direta/page.js",
+  "/manual-fuga/page": "app/manual-fuga/page.js",
+  "/chat-juridico/page": "app/chat-juridico/page.js",
+  "/apoio-psicologico/page": "app/apoio-psicologico/page.js"
+}
