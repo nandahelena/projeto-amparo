@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft, Heart, MapPin, Phone, Globe, Clock, Search } from "lucide-react"
+import { ProtectedRoute } from "@/components/ProtectedRoute"
 
 interface SupportService {
   id: string
@@ -174,9 +175,10 @@ export default function ApoioPsicologicoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-purple-100">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-purple-100">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center space-x-4">
             <Link href="/">
@@ -347,5 +349,6 @@ export default function ApoioPsicologicoPage() {
         </Card>
       </main>
     </div>
+    </ProtectedRoute>
   )
 }

@@ -1,9 +1,11 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react"
+import { BackButton } from "@/components/BackButton"
 
 // Tornar a página dinâmica
 export const dynamic = "force-dynamic"
@@ -14,14 +16,15 @@ export default function VerifyEmailPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center text-[#A459D1] hover:text-purple-600 mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar ao início
-          </Link>
+          <BackButton />
           <div className="flex items-center justify-center space-x-3 mb-2">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-              <div className="w-8 h-8 bg-[#A459D1] rounded-full"></div>
-            </div>
+            <Image
+              src="/LOGO-AMPARO.png.png"
+              alt="Projeto Amparo"
+              width={48}
+              height={48}
+              className="rounded-lg"
+            />
             <h1 className="text-3xl font-bold text-[#A459D1]">Projeto Amparo</h1>
           </div>
         </div>

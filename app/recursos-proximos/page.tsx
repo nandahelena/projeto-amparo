@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, MapPin, Phone, Clock, Navigation, Search, Shield } from "lucide-react"
+import { ProtectedRoute } from "@/components/ProtectedRoute"
 
 interface Resource {
   id: string
@@ -238,9 +239,10 @@ export default function RecursosProximosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-purple-100">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-purple-100">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center space-x-4">
             <Link href="/">
@@ -423,5 +425,6 @@ export default function RecursosProximosPage() {
         </Card>
       </main>
     </div>
+    </ProtectedRoute>
   )
 }

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Plus, Trash2, MessageCircle, Phone, AlertTriangle, Edit } from "lucide-react"
+import { ProtectedRoute } from "@/components/ProtectedRoute"
 
 interface EmergencyContact {
   id: string
@@ -127,9 +128,10 @@ export default function ContatosEmergenciaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-purple-100">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-purple-100">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center space-x-4">
             <Link href="/">
@@ -384,5 +386,6 @@ export default function ContatosEmergenciaPage() {
         </Card>
       </main>
     </div>
+    </ProtectedRoute>
   )
 }

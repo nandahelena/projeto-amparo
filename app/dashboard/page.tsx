@@ -1,8 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useAuthContext } from '@/components/AuthProvider'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -36,63 +39,73 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [hasChecked, setHasChecked] = useState(false)
 
   const router = useRouter()
+  const { logout } = (() => {
+    try {
+      return useAuthContext()
+    } catch (e) {
+      return { logout: () => {} }
+    }
+  })()
 
   useEffect(() => {
-    const getUser = async () => {
-      try {
-        // Verificar se há usuário logado no localStorage
-        const userData = localStorage.getItem("projeto-amparo-user")
-        const profileData = localStorage.getItem("projeto-amparo-profile")
-
-        if (!userData) {
-          router.push("/auth/login")
-          return
-        }
-
-        const user = JSON.parse(userData)
-        setUser(user)
-
-        if (profileData) {
-          const profile = JSON.parse(profileData)
-          setProfile(profile)
-        }
-
-        // Buscar atividades recentes do localStorage
-        const activities = JSON.parse(localStorage.getItem("projeto-amparo-activities") || "[]")
-
-        // Se não houver atividades, criar algumas de exemplo
-        if (activities.length === 0) {
-          const defaultActivities = [
-            {
-              id: 1,
-              type: "account",
-              description: "Conta criada com sucesso",
-              timestamp: new Date().toISOString(),
-            },
-          ]
-          localStorage.setItem("projeto-amparo-activities", JSON.stringify(defaultActivities))
-          setRecentActivity(defaultActivities)
-        } else {
-          setRecentActivity(activities.slice(-5)) // Últimas 5 atividades
-        }
-      } catch (error) {
-        console.error("Erro ao buscar usuário:", error)
-        router.push("/auth/login")
-      } finally {
-        setIsLoading(false)
-      }
+    if (hasChecked) return // Only run once
+    
+    const token = localStorage.getItem('projeto-amparo-token')
+    const userStr = localStorage.getItem('projeto-amparo-user')
+    
+    if (!token || !userStr) {
+      router.push('/auth/login')
+      setHasChecked(true)
+      return
     }
 
-    getUser()
-  }, [router])
+    try {
+      const parsedUser = JSON.parse(userStr)
+      setUser(parsedUser)
+
+      // load profile & activities from localStorage
+      const profileData = localStorage.getItem('projeto-amparo-profile')
+      if (profileData) {
+        try {
+          setProfile(JSON.parse(profileData))
+        } catch {
+          // ignore
+        }
+      }
+
+      const activities = JSON.parse(localStorage.getItem('projeto-amparo-activities') || '[]')
+      if (activities.length === 0) {
+        const defaultActivities = [
+          { id: 1, type: 'account', description: 'Conta criada com sucesso', timestamp: new Date().toISOString() },
+        ]
+        localStorage.setItem('projeto-amparo-activities', JSON.stringify(defaultActivities))
+        setRecentActivity(defaultActivities)
+      } else {
+        setRecentActivity(activities.slice(-5))
+      }
+
+      setIsLoading(false)
+    } catch {
+      router.push('/auth/login')
+    }
+    
+    setHasChecked(true)
+  }, [hasChecked, router])
 
   const handleLogout = async () => {
     try {
-      // Limpar dados do localStorage
-      localStorage.removeItem("projeto-amparo-user")
-      router.push("/")
+      // Limpar sessão via contexto
+      try {
+        // use logout from context if available
+        // @ts-ignore
+        if (typeof logout === 'function') logout()
+      } catch (e) {
+        localStorage.removeItem('projeto-amparo-user')
+      }
+      router.push('/')
     } catch (error) {
       console.error("Erro no logout:", error)
       router.push("/")
@@ -137,15 +150,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-purple-100">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-purple-100">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                <div className="w-6 h-6 bg-[#A459D1] rounded-full"></div>
-              </div>
+              <Image
+                src="/LOGO-AMPARO.png.png"
+                alt="Projeto Amparo"
+                width={40}
+                height={40}
+                className="rounded-lg"
+              />
               <div>
                 <h1 className="text-2xl font-bold text-[#A459D1]">Projeto Amparo</h1>
                 <p className="text-sm text-gray-600">Bem-vinda, {profile?.fullName || user?.name || user?.email}</p>
@@ -338,5 +356,6 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
+    </ProtectedRoute>
   )
 }

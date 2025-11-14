@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, AlertTriangle, Phone, Mic, MessageCircle, Shield } from "lucide-react"
+import { ProtectedRoute } from "@/components/ProtectedRoute"
 
 export default function BotaoPanicoPage() {
   const [isActivated, setIsActivated] = useState(false)
@@ -84,9 +85,10 @@ export default function BotaoPanicoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-red-100">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-red-100">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center space-x-4">
             <Link href="/">
@@ -279,5 +281,6 @@ export default function BotaoPanicoPage() {
         </Card>
       </main>
     </div>
+    </ProtectedRoute>
   )
 }

@@ -4,7 +4,10 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { setAuthToken, getBackendUrl } from '@/lib/auth'
+import { useAuthContext } from '@/components/AuthProvider'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Calendar, MapPin, AlertTriangle } from "lucide-react"
+import { BackButton } from "@/components/BackButton"
 
 export const dynamic = "force-dynamic"
 
@@ -61,6 +65,30 @@ export default function RegisterPage() {
       return false
     }
 
+    // Validação da data de nascimento (se preenchida)
+    if (formData.dateOfBirth) {
+      const dobString = formData.dateOfBirth
+      // formato esperado YYYY-MM-DD
+      const isoMatch = /^\d{4}-\d{2}-\d{2}$/.test(dobString)
+      const dob = new Date(dobString)
+      const now = new Date()
+      const year = dob.getUTCFullYear()
+      const currentYear = now.getUTCFullYear()
+
+      if (!isoMatch || Number.isNaN(dob.getTime())) {
+        setError('Data de nascimento inválida.')
+        return false
+      }
+      if (year < 1900 || year > currentYear) {
+        setError(`Insira um ano válido entre 1900 e ${currentYear}.`)
+        return false
+      }
+      if (dob > now) {
+        setError('A data de nascimento não pode ser no futuro.')
+        return false
+      }
+    }
+
     return true
   }
 
@@ -73,27 +101,55 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      // Simular delay de criação de conta
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // Salvar dados no localStorage
-      const userData = {
-        id: Date.now().toString(),
+      // Enviar para o backend
+      const payload = {
         email: formData.email,
-        fullName: formData.fullName,
-        dateOfBirth: formData.dateOfBirth,
-        city: formData.city,
-        state: formData.state,
-        emergencyContact: formData.emergencyContact,
-        emergencyPhone: formData.emergencyPhone,
-        createdAt: new Date().toISOString(),
+        password: formData.password,
+        fullName: formData.fullName || undefined,
+        dateOfBirth: formData.dateOfBirth || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        emergencyContact: formData.emergencyContact || undefined,
+        emergencyPhone: formData.emergencyPhone || undefined,
       }
 
-      localStorage.setItem("projeto-amparo-user", JSON.stringify(userData))
-      localStorage.setItem("projeto-amparo-profile", JSON.stringify(userData))
+      const res = await fetch(getBackendUrl('/api/register'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
 
-      // Redirecionar para página de sucesso
-      router.push("/auth/verify-email")
+      const resJson = await res.json()
+      if (!res.ok) {
+        setError(resJson.error || 'Erro ao criar conta')
+        setIsLoading(false)
+        return
+      }
+
+      // Autenticar automaticamente
+      const loginResp = await fetch(getBackendUrl('/api/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, password: formData.password }),
+      })
+
+      const loginJson = await loginResp.json()
+      if (!loginResp.ok) {
+        setError(loginJson.error || 'Conta criada, mas não foi possível autenticar.')
+        setIsLoading(false)
+        return
+      }
+
+      // Salvar token + user
+      try {
+        setAuthToken(loginJson.token, loginJson.user)
+        // also notify other tabs
+        localStorage.setItem('projeto-amparo-last-activity', Date.now().toString())
+      } catch (e) {
+        // ignore
+      }
+
+      router.push('/dashboard')
     } catch (error) {
       console.error("Erro no cadastro:", error)
       setError("Erro interno. Tente novamente mais tarde.")
@@ -137,14 +193,15 @@ export default function RegisterPage() {
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center text-[#A459D1] hover:text-purple-600 mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar ao início
-          </Link>
+          <BackButton />
           <div className="flex items-center justify-center space-x-3 mb-2">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-              <div className="w-8 h-8 bg-[#A459D1] rounded-full"></div>
-            </div>
+            <Image
+              src="/LOGO-AMPARO.png.png"
+              alt="Projeto Amparo"
+              width={48}
+              height={48}
+              className="rounded-lg"
+            />
             <h1 className="text-3xl font-bold text-[#A459D1]">Projeto Amparo</h1>
           </div>
           <p className="text-gray-600">Crie sua conta para salvar seus dados com segurança</p>
@@ -274,6 +331,7 @@ export default function RegisterPage() {
                       <Input
                         id="dateOfBirth"
                         type="date"
+                        max={new Date().toISOString().slice(0, 10)}
                         value={formData.dateOfBirth}
                         onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
                         className="pl-10"

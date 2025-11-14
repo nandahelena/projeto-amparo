@@ -4,12 +4,16 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { setAuthToken, getBackendUrl } from '@/lib/auth'
+import { useAuthContext } from '@/components/AuthProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react"
+import { BackButton } from "@/components/BackButton"
 
 export const dynamic = "force-dynamic"
 
@@ -21,6 +25,14 @@ export default function LoginPage() {
   const [error, setError] = useState("")
 
   const router = useRouter()
+
+  const { login } = (() => {
+    try {
+      return useAuthContext()
+    } catch (e) {
+      return { login: (t: string, u: any) => {} }
+    }
+  })()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,25 +52,36 @@ export default function LoginPage() {
         return
       }
 
-      // Simular delay de autenticação
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Call backend login
+      const response = await fetch(getBackendUrl('/api/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
 
-      // Por enquanto, aceitar qualquer email/senha válidos
-      if (email.includes("@") && password.length >= 6) {
-        // Salvar dados básicos no localStorage
-        localStorage.setItem(
-          "projeto-amparo-user",
-          JSON.stringify({
-            email,
-            name: email.split("@")[0],
-            loginTime: new Date().toISOString(),
-          }),
-        )
-
-        router.push("/dashboard")
-      } else {
-        setError("Email ou senha incorretos.")
+      const data = await response.json()
+      if (!response.ok) {
+        setError(data.error || 'Email ou senha incorretos.')
+        setIsLoading(false)
+        return
       }
+
+      // Save token and user via lib + context
+      try {
+        setAuthToken(data.token, data.user)
+        try {
+          login && login(data.token, data.user)
+        } catch (e) {
+          // ignore context errors
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // Pequeno delay para garantir que localStorage foi atualizado
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 100)
     } catch (error) {
       console.error("Erro no login:", error)
       setError("Erro interno. Tente novamente mais tarde.")
@@ -72,14 +95,15 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center text-[#A459D1] hover:text-purple-600 mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar ao início
-          </Link>
+          <BackButton />
           <div className="flex items-center justify-center space-x-3 mb-2">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-              <div className="w-8 h-8 bg-[#A459D1] rounded-full"></div>
-            </div>
+            <Image
+              src="/LOGO-AMPARO.png.png"
+              alt="Projeto Amparo"
+              width={48}
+              height={48}
+              className="rounded-lg"
+            />
             <h1 className="text-3xl font-bold text-[#A459D1]">Projeto Amparo</h1>
           </div>
           <p className="text-gray-600">Entre na sua conta para acessar seus dados salvos</p>
