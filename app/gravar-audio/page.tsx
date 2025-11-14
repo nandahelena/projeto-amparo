@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Mic, Square, Download, Share2, MapPin, Clock, Trash2 } from "lucide-react"
+import { ArrowLeft, Mic, Square, Download, MapPin, Clock, Trash2 } from "lucide-react"
 
 interface AudioRecording {
   id: string
@@ -298,103 +298,7 @@ export default function GravarAudioPage() {
     }
   }
 
-  const shareRecording = async (recording: AudioRecording) => {
-    // Verifica se a API de compartilhamento existe
-    if (typeof navigator === "undefined" || !navigator.share) {
-      alert("Compartilhamento não disponível neste dispositivo")
-      return
-    }
-
-    const canShareFiles = (files: File[]) => {
-      try {
-        // @ts-ignore
-        if (navigator.canShare) return (navigator as any).canShare({ files })
-      } catch (e) {
-        return false
-      }
-      return false
-    }
-
-    const doShareWithBlob = async (blob: Blob) => {
-      const ext = (blob.type && blob.type.split("/")[1]) || "mp3"
-      const file = new File([blob], `${recording.name}.${ext}`, { type: blob.type })
-
-      // Se o ambiente suporta compartilhamento de arquivos
-      if (canShareFiles([file])) {
-        try {
-          await navigator.share({
-            title: recording.name,
-            text: `Gravação de áudio - ${recording.date} ${recording.time}`,
-            files: [file],
-          })
-          return true
-        } catch (err) {
-          console.error("Erro ao compartilhar (com files):", err)
-          return false
-        }
-      }
-
-      // Fallback: tentar compartilhar apenas texto (sem arquivo)
-      try {
-        await navigator.share({
-          title: recording.name,
-          text: `Gravação de áudio - ${recording.date} ${recording.time}`,
-        })
-        // Avisar o usuário que o arquivo não foi incluído
-        alert("Seu dispositivo não suporta compartilhamento de arquivos — será oferecido o download do arquivo para que você possa compartilhá-lo manualmente.")
-        return false
-      } catch (err) {
-        console.error("Erro ao compartilhar (texto):", err)
-        return false
-      }
-    }
-
-    try {
-      if (recording.blob) {
-        // Se não for mp3, converter antes de compartilhar
-        if (recording.blob.type !== "audio/mpeg") {
-          try {
-            const mp3 = await convertBlobToMp3(recording.blob)
-            const ok = await doShareWithBlob(mp3)
-            if (!ok) downloadRecording({ ...recording, blob: mp3 })
-          } catch (err) {
-            // fallback: compartilhar o blob original
-            const ok = await doShareWithBlob(recording.blob)
-            if (!ok) downloadRecording(recording)
-          }
-        } else {
-          const ok = await doShareWithBlob(recording.blob)
-          if (!ok) downloadRecording(recording)
-        }
-        return
-      }
-
-      if (recording.dataUrl) {
-        const fetched = await fetch(recording.dataUrl)
-        const fetchedBlob = await fetched.blob()
-        if (fetchedBlob.type !== "audio/mpeg") {
-          try {
-            const mp3 = await convertBlobToMp3(fetchedBlob)
-            const ok = await doShareWithBlob(mp3)
-            if (!ok) downloadRecording({ ...recording, blob: mp3 })
-          } catch (err) {
-            const ok = await doShareWithBlob(fetchedBlob)
-            if (!ok) downloadRecording(recording)
-          }
-        } else {
-          const ok = await doShareWithBlob(fetchedBlob)
-          if (!ok) downloadRecording(recording)
-        }
-        return
-      }
-    } catch (err) {
-      console.error("Erro no processo de compartilhamento:", err)
-      alert("Não foi possível compartilhar a gravação")
-      return
-    }
-
-    alert("Gravação não disponível para compartilhamento")
-  }
+  // Compartilhamento removido — funcionalidade desativada
 
   const downloadRecording = (recording: AudioRecording) => {
     if (recording.dataUrl) {
@@ -535,10 +439,7 @@ export default function GravarAudioPage() {
                         <Download className="w-4 h-4 mr-1" />
                         Baixar
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => shareRecording(recording)}>
-                        <Share2 className="w-4 h-4 mr-1" />
-                        Compartilhar
-                      </Button>
+                      {/* Compartilhamento removido */}
                       <Button size="sm" variant="outline" onClick={() => deleteRecording(recording.id)} className="text-red-600">
                         <Trash2 className="w-4 h-4 mr-1" />
                         Excluir

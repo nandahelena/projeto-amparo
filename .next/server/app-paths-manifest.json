@@ -1,4 +1,4 @@
 {
-  "/page": "app/page.js",
-  "/gravar-audio/page": "app/gravar-audio/page.js"
+  "/gravar-audio/page": "app/gravar-audio/page.js",
+  "/page": "app/page.js"
 }
