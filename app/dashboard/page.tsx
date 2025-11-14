@@ -166,7 +166,7 @@ export default function DashboardPage() {
               />
               <div>
                 <h1 className="text-2xl font-bold text-[#A459D1]">Projeto Amparo</h1>
-                <p className="text-sm text-gray-600">Bem-vinda, {profile?.fullName || user?.name || user?.email}</p>
+                <p className="text-sm text-gray-600">Bem-vinda, {user?.fullName || user?.name || "Usuária"}</p>
               </div>
             </div>
 
