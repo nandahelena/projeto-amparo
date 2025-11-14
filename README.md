@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/logo.png" width="120" alt="Projeto Amparo Logo"/>
+  <img src="public/LOGO-AMPARO.jpeg.jpg" width="120" alt="Projeto Amparo Logo"/>
 </p>
 
 <h1 align="center"> Projeto Amparo </h1>
