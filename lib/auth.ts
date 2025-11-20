@@ -1,3 +1,4 @@
+"use client";
 // Utilities to manage authentication state (token + user) in localStorage
 export const TOKEN_KEY = 'projeto-amparo-token'
 export const USER_KEY = 'projeto-amparo-user'
@@ -47,11 +48,8 @@ export function isAuthenticated() {
   return !!getAuthToken()
 }
 
-export function getBackendUrl(path: string) {
-  const base = typeof window !== 'undefined' && (window as any).NEXT_PUBLIC_BACKEND_URL
-  || process.env.NEXT_PUBLIC_BACKEND_URL
-  || 'http://localhost:4000'
-  return `${base}${path}`
+export function getBackendUrl() {
+  return process.env.NEXT_PUBLIC_BACKEND_URL!
 }
 
 export async function authFetch(input: RequestInfo, init: RequestInit = {}) {
