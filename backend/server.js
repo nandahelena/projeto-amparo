@@ -215,13 +215,23 @@ function authenticate(req, res, next) {
 
 // Example protected endpoint
 app.get('/api/me', authenticate, async (req, res) => {
-  const user = await dbGet('SELECT id, email, full_name as fullName FROM users WHERE id = ?', [req.user.id])
-  if (!user) return res.status(404).json({ error: 'Usuário não encontrado' })
-  res.json({ user })
+  try {
+    let user
+    if (isPostgres) {
+      user = await dbGet('SELECT id, email, full_name as "fullName" FROM users WHERE id = $1', [req.user.id])
+    } else {
+      user = await dbGet('SELECT id, email, full_name as fullName FROM users WHERE id = ?', [req.user.id])
+    }
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' })
+    res.json({ user })
+  } catch (err) {
+    console.error('/api/me error:', err)
+    return res.status(500).json({ error: 'Erro interno' })
+  }
 })
 
 // Start server after DB init
-initDb()
+initClients()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Backend running on http://localhost:${PORT}`)
