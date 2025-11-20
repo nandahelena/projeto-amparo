@@ -2,5 +2,6 @@
   "/page": "app/page.js",
   "/dashboard/page": "app/dashboard/page.js",
   "/auth/login/page": "app/auth/login/page.js",
-  "/contatos-emergencia/page": "app/contatos-emergencia/page.js"
+  "/contatos-emergencia/page": "app/contatos-emergencia/page.js",
+  "/gravar-audio/page": "app/gravar-audio/page.js"
 }
