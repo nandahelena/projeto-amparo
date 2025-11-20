@@ -48,8 +48,9 @@ export function isAuthenticated() {
   return !!getAuthToken()
 }
 
-export function getBackendUrl() {
-  return process.env.NEXT_PUBLIC_BACKEND_URL!
+export function getBackendUrl(path: string = '') {
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? (typeof window !== 'undefined' ? (window as any).NEXT_PUBLIC_BACKEND_URL : undefined) ?? 'http://localhost:4000'
+  return `${base}${path}`
 }
 
 export async function authFetch(input: RequestInfo, init: RequestInit = {}) {
