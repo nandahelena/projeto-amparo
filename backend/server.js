@@ -18,47 +18,92 @@ const DATA_DIR = path.join(__dirname, 'data')
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
 const DB_PATH = path.join(DATA_DIR, 'app.db')
 
-const db = new (sqlite3.verbose()).Database(DB_PATH, (err) => {
-  if (err) {
-    console.error('Erro abrindo DB:', err)
-    process.exit(1)
-  }
-})
+// Support both SQLite (local dev) and Postgres (production on Railway/Render)
+const isPostgres = !!process.env.DATABASE_URL
+let sqliteDb = null
+let pgClient = null
 
-// Promisified helpers
-const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function (err) {
-    if (err) return reject(err)
-    resolve(this)
-  })
-})
-const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => {
-    if (err) return reject(err)
-    resolve(row)
-  })
-})
+// Promisified helpers will delegate to the active client
+let dbRun
+let dbGet
 
-async function initDb() {
-  // Create a simple users table suitable for SQLite. The repo's SQL is Postgres-specific,
-  // so we create a lightweight local schema here for the backend demo.
-  try {
-    await dbRun(`CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      full_name TEXT,
-      date_of_birth TEXT,
-      city TEXT,
-      state TEXT,
-      emergency_contact TEXT,
-      emergency_phone TEXT,
-      created_at TEXT
-    );`)
-    console.log('DB initialized at', DB_PATH)
-  } catch (err) {
-    console.error('Failed to initialize DB:', err)
-    throw err
+async function initClients() {
+  if (isPostgres) {
+    const { Client } = await import('pg')
+    pgClient = new Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
+    await pgClient.connect()
+
+    dbRun = async (sql, params = []) => {
+      // Use RETURNING id for inserts when caller expects lastID
+      const res = await pgClient.query(sql, params)
+      return res
+    }
+
+    dbGet = async (sql, params = []) => {
+      const res = await pgClient.query(sql, params)
+      return res.rows[0]
+    }
+
+    // Init Postgres schema
+    try {
+      await pgClient.query(`CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        full_name TEXT,
+        date_of_birth TEXT,
+        city TEXT,
+        state TEXT,
+        emergency_contact TEXT,
+        emergency_phone TEXT,
+        created_at TIMESTAMP
+      );`)
+      console.log('Postgres DB initialized')
+    } catch (err) {
+      console.error('Failed to initialize Postgres DB:', err)
+      throw err
+    }
+  } else {
+    // SQLite for local development
+    sqliteDb = new (sqlite3.verbose()).Database(DB_PATH, (err) => {
+      if (err) {
+        console.error('Erro abrindo DB:', err)
+        process.exit(1)
+      }
+    })
+
+    dbRun = (sql, params = []) => new Promise((resolve, reject) => {
+      sqliteDb.run(sql, params, function (err) {
+        if (err) return reject(err)
+        resolve(this)
+      })
+    })
+
+    dbGet = (sql, params = []) => new Promise((resolve, reject) => {
+      sqliteDb.get(sql, params, (err, row) => {
+        if (err) return reject(err)
+        resolve(row)
+      })
+    })
+
+    try {
+      await dbRun(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        full_name TEXT,
+        date_of_birth TEXT,
+        city TEXT,
+        state TEXT,
+        emergency_contact TEXT,
+        emergency_phone TEXT,
+        created_at TEXT
+      );`)
+      console.log('SQLite DB initialized at', DB_PATH)
+    } catch (err) {
+      console.error('Failed to initialize SQLite DB:', err)
+      throw err
+    }
   }
 }
 
@@ -78,19 +123,34 @@ app.post('/api/register', async (req, res) => {
     }
 
     // check existing
-    const existing = await dbGet('SELECT id FROM users WHERE email = ?', [email])
+    let existing
+    if (isPostgres) {
+      existing = await dbGet('SELECT id FROM users WHERE email = $1', [email])
+    } else {
+      existing = await dbGet('SELECT id FROM users WHERE email = ?', [email])
+    }
     if (existing) return res.status(409).json({ error: 'Email já cadastrado' })
 
     const password_hash = await bcrypt.hash(password, 12)
     const created_at = new Date().toISOString()
 
-    const result = await dbRun(
-      `INSERT INTO users (email, password_hash, full_name, date_of_birth, city, state, emergency_contact, emergency_phone, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [email, password_hash, fullName || null, dateOfBirth || null, city || null, state || null, emergencyContact || null, emergencyPhone || null, created_at]
-    )
+    let newUserId = null
+    if (isPostgres) {
+      const insertRes = await dbRun(
+        `INSERT INTO users (email, password_hash, full_name, date_of_birth, city, state, emergency_contact, emergency_phone, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        [email, password_hash, fullName || null, dateOfBirth || null, city || null, state || null, emergencyContact || null, emergencyPhone || null, created_at]
+      )
+      newUserId = insertRes.rows && insertRes.rows[0] ? insertRes.rows[0].id : null
+    } else {
+      const result = await dbRun(
+        `INSERT INTO users (email, password_hash, full_name, date_of_birth, city, state, emergency_contact, emergency_phone, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [email, password_hash, fullName || null, dateOfBirth || null, city || null, state || null, emergencyContact || null, emergencyPhone || null, created_at]
+      )
+      newUserId = result.lastID
+    }
 
-    const newUserId = result.lastID
     return res.status(201).json({ id: newUserId, email })
   } catch (err) {
     console.error('Register error:', err)
@@ -104,7 +164,12 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body
     if (!email || !password) return res.status(400).json({ error: 'Email e senha são obrigatórios' })
 
-    const user = await dbGet('SELECT * FROM users WHERE email = ?', [email])
+    let user
+    if (isPostgres) {
+      user = await dbGet('SELECT * FROM users WHERE email = $1', [email])
+    } else {
+      user = await dbGet('SELECT * FROM users WHERE email = ?', [email])
+    }
     if (!user) return res.status(401).json({ error: 'Credenciais inválidas' })
 
     const ok = await bcrypt.compare(password, user.password_hash)
