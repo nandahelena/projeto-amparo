@@ -236,7 +236,6 @@ export default function SettingsPage() {
                         <SelectValue placeholder="UF" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Selecione...</SelectItem>
                         {brazilianStates.map((state) => (
                           <SelectItem key={state} value={state}>
                             {state}
