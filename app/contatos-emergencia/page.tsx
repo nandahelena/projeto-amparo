@@ -13,6 +13,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { getAuthUser } from "@/lib/auth"
 import { toast } from "@/hooks/use-toast"
 import { getPublicBackendUrl } from "@/lib/client-env"
+import { useRef } from "react"
 
 interface EmergencyContact {
   id: string
@@ -24,6 +25,7 @@ interface EmergencyContact {
 }
 
 export default function ContatosEmergenciaPage() {
+  const formRef = useRef<HTMLDivElement>(null)
   const [contacts, setContacts] = useState<EmergencyContact[]>([])
   const [isAddingContact, setIsAddingContact] = useState(false)
   const [editingContact, setEditingContact] = useState<string | null>(null)
@@ -219,8 +221,37 @@ export default function ContatosEmergenciaPage() {
     alert("Mensagem de emergência salva!")
   }
 
+  const formatPhoneNumber = (value: string): string => {
+    // Remove all non-digit characters
+    const digitsOnly = value.replace(/\D/g, '')
+    
+    // Format as +00 (00) 0000-0000 or +00 (00) 00000-0000 depending on length
+    if (digitsOnly.length <= 2) {
+      return digitsOnly
+    }
+    if (digitsOnly.length <= 4) {
+      return `+${digitsOnly.slice(0, 2)} (${digitsOnly.slice(2)}`
+    }
+    if (digitsOnly.length <= 8) {
+      return `+${digitsOnly.slice(0, 2)} (${digitsOnly.slice(2, 4)}) ${digitsOnly.slice(4)}`
+    }
+    // Format as +00 (00) 00000-0000 or +00 (00) 0000-0000
+    return `+${digitsOnly.slice(0, 2)} (${digitsOnly.slice(2, 4)}) ${digitsOnly.slice(4, 8)}-${digitsOnly.slice(8, 12)}`
+  }
+
+  const formatPhoneForTel = (phone: string): string => {
+    // Remove all non-digit characters
+    const digitsOnly = phone.replace(/\D/g, '')
+    // If it starts with 55 (Brazil country code), keep it, otherwise prepend 55
+    if (digitsOnly.startsWith('55')) {
+      return digitsOnly
+    }
+    return '55' + digitsOnly
+  }
+
   const callContact = (phone: string) => {
-    window.location.href = `tel:${phone}`
+    const formattedPhone = formatPhoneForTel(phone)
+    window.location.href = `tel:+${formattedPhone}`
   }
 
   const sendWhatsAppMessage = (phone: string, contactName: string) => {
@@ -306,7 +337,13 @@ export default function ContatosEmergenciaPage() {
                   Cadastre pessoas de confiança que serão alertadas em situações de emergência
                 </CardDescription>
               </div>
-              <Button onClick={() => setIsAddingContact(true)} className="bg-[#A459D1] hover:bg-purple-600">
+              <Button onClick={() => {
+                setIsAddingContact(true)
+                // Smooth scroll after state updates
+                setTimeout(() => {
+                  formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }, 100)
+              }} className="bg-[#A459D1] hover:bg-purple-600">
                 <Plus className="w-4 h-4 mr-2" />
                 Adicionar Contato
               </Button>
@@ -320,7 +357,13 @@ export default function ContatosEmergenciaPage() {
                 <p className="text-gray-500 mb-4">
                   Adicione um contato de emergência em Configurações ou aqui para receber alertas automáticos em emergências
                 </p>
-                <Button onClick={() => setIsAddingContact(true)} className="bg-[#A459D1] hover:bg-purple-600">
+                <Button onClick={() => {
+                  setIsAddingContact(true)
+                  // Smooth scroll after state updates
+                  setTimeout(() => {
+                    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }, 100)
+                }} className="bg-[#A459D1] hover:bg-purple-600">
                   <Plus className="w-4 h-4 mr-2" />
                   Adicionar Contato
                 </Button>
@@ -434,7 +477,7 @@ export default function ContatosEmergenciaPage() {
 
         {/* Formulário para Adicionar Contato */}
         {isAddingContact && (
-          <Card className="mb-8">
+          <Card className="mb-8" ref={formRef}>
             <CardHeader>
               <CardTitle className="text-[#A459D1]">Adicionar Novo Contato</CardTitle>
             </CardHeader>
@@ -455,8 +498,11 @@ export default function ContatosEmergenciaPage() {
                   <Input
                     id="phone"
                     value={newContact.phone}
-                    onChange={(e) => setNewContact((prev) => ({ ...prev, phone: e.target.value }))}
-                    placeholder="Ex: (11) 99999-9999"
+                    onChange={(e) => {
+                      const formatted = formatPhoneNumber(e.target.value)
+                      setNewContact((prev) => ({ ...prev, phone: formatted }))
+                    }}
+                    placeholder="Ex: +55 (11) 99999-9999"
                   />
                 </div>
 
