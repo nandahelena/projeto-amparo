@@ -124,6 +124,9 @@ const corsOptions = {
 app.use(cors(corsOptions))
 app.use(express.json())
 
+// Handle preflight requests
+app.options('*', cors(corsOptions))
+
 // Helpers
 const signToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
 
@@ -241,6 +244,11 @@ app.get('/api/me', authenticate, async (req, res) => {
     console.error('/api/me error:', err)
     return res.status(500).json({ error: 'Erro interno' })
   }
+})
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
 // Start server after DB init
