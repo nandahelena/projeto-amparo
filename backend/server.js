@@ -109,23 +109,16 @@ async function initClients() {
 
 const app = express()
 
-// CORS configuration
+// CORS configuration - allow all origins for now (can be restricted later)
 const corsOptions = {
-  origin: [
-    'https://www.amparobrace.com.br',
-    'https://amparobrace.com.br',
-    'http://localhost:3000',
-    'http://localhost:3001',
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  origin: '*',
+  credentials: false,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }
 app.use(cors(corsOptions))
-app.use(express.json())
-
-// Handle preflight requests
 app.options('*', cors(corsOptions))
+app.use(express.json())
 
 // Helpers
 const signToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
