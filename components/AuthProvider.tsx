@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { getAuthUser, getAuthToken, setAuthToken, clearAuth, User, getBackendUrl } from '@/lib/auth'
+import { getAuthUser, getAuthToken, setAuthToken, clearAuth, User } from '@/lib/auth'
 
 type AuthContextType = {
   user: User | null
