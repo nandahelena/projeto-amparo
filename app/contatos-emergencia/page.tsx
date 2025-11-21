@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Plus, Trash2, MessageCircle, Phone, AlertTriangle, Edit } from "lucide-react"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
+import { getAuthUser } from "@/lib/auth"
 
 interface EmergencyContact {
   id: string
@@ -17,6 +18,7 @@ interface EmergencyContact {
   phone: string
   relationship: string
   priority: number
+  isPrimary?: boolean
 }
 
 export default function ContatosEmergenciaPage() {
@@ -34,11 +36,30 @@ export default function ContatosEmergenciaPage() {
   })
 
   useEffect(() => {
-    // Carregar contatos salvos
-    const savedContacts = localStorage.getItem("emergency-contacts")
-    if (savedContacts) {
-      setContacts(JSON.parse(savedContacts))
+    // Carregar contato de emergência principal do user (settings)
+    const user = getAuthUser()
+    let allContacts: EmergencyContact[] = []
+
+    // Se houver contato de emergência principal registrado em settings
+    if (user?.emergencyContact && user?.emergencyPhone) {
+      allContacts.push({
+        id: "primary",
+        name: user.emergencyContact,
+        phone: user.emergencyPhone,
+        relationship: "Contato de Emergência Principal",
+        priority: 1,
+        isPrimary: true,
+      })
     }
+
+    // Carregar contatos adicionais salvos em localStorage
+    const savedAdditionalContacts = localStorage.getItem("emergency-contacts-additional")
+    if (savedAdditionalContacts) {
+      const additionalContacts = JSON.parse(savedAdditionalContacts)
+      allContacts = [...allContacts, ...additionalContacts]
+    }
+
+    setContacts(allContacts)
 
     // Carregar mensagem personalizada
     const savedMessage = localStorage.getItem("emergency-message")
@@ -49,7 +70,9 @@ export default function ContatosEmergenciaPage() {
 
   const saveContacts = (updatedContacts: EmergencyContact[]) => {
     setContacts(updatedContacts)
-    localStorage.setItem("emergency-contacts", JSON.stringify(updatedContacts))
+    // Salvar apenas contatos adicionais (não o principal que vem do settings)
+    const additionalContacts = updatedContacts.filter(c => c.id !== "primary")
+    localStorage.setItem("emergency-contacts-additional", JSON.stringify(additionalContacts))
   }
 
   const addContact = () => {
@@ -71,11 +94,21 @@ export default function ContatosEmergenciaPage() {
   }
 
   const removeContact = (id: string) => {
+    // Não permitir remover o contato primário
+    if (id === "primary") {
+      alert("O contato de emergência principal não pode ser removido. Altere-o em Configurações.")
+      return
+    }
     const updatedContacts = contacts.filter((contact) => contact.id !== id)
     saveContacts(updatedContacts)
   }
 
   const updateContact = (id: string, updatedData: Partial<EmergencyContact>) => {
+    // Não permitir editar o contato primário
+    if (id === "primary") {
+      alert("O contato de emergência principal não pode ser editado aqui. Altere-o em Configurações.")
+      return
+    }
     const updatedContacts = contacts.map((contact) => (contact.id === id ? { ...contact, ...updatedData } : contact))
     saveContacts(updatedContacts)
     setEditingContact(null)
@@ -149,6 +182,18 @@ export default function ContatosEmergenciaPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Info Card sobre Sincronização */}
+        {contacts.find(c => c.isPrimary) && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <p className="text-sm text-blue-800">
+                ℹ️ <strong>Contato de Emergência Principal:</strong> Este é o contato registrado em suas <Link href="/settings" className="underline font-semibold">Configurações</Link>. 
+                Qualquer alteração em Configurações será automaticamente sincronizada aqui.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Botão de Alerta Rápido */}
         <Card className="mb-8 border-red-200 bg-red-50">
           <CardContent className="p-6">
@@ -194,16 +239,37 @@ export default function ContatosEmergenciaPage() {
                 <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-600 mb-2">Nenhum contato cadastrado</h3>
                 <p className="text-gray-500 mb-4">
-                  Adicione contatos de confiança para receber alertas automáticos em emergências
+                  Adicione um contato de emergência em Configurações ou aqui para receber alertas automáticos em emergências
                 </p>
                 <Button onClick={() => setIsAddingContact(true)} className="bg-[#A459D1] hover:bg-purple-600">
                   <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Primeiro Contato
+                  Adicionar Contato
                 </Button>
               </div>
             ) : (
               <div className="space-y-4">
-                {contacts.map((contact) => (
+                {/* Contato Primário de Emergência */}
+                {contacts.find(c => c.isPrimary) && (
+                  <div className="border-2 border-[#A459D1] rounded-lg p-4 bg-purple-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-800">⭐ {contacts.find(c => c.isPrimary)?.name}</h3>
+                        <p className="text-sm text-gray-600">{contacts.find(c => c.isPrimary)?.phone}</p>
+                        <p className="text-xs text-[#A459D1] font-semibold mt-1">CONTATO PRIMÁRIO - Sincronizado com Configurações</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => callContact(contacts.find(c => c.isPrimary)?.phone || "")}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Phone className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Contatos Adicionais */}
+                {contacts.filter(c => !c.isPrimary).map((contact) => (
                   <div key={contact.id} className="border rounded-lg p-4 bg-white">
                     {editingContact === contact.id ? (
                       <div className="space-y-3">
