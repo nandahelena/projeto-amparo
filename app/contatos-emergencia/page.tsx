@@ -225,18 +225,18 @@ export default function ContatosEmergenciaPage() {
     // Remove all non-digit characters
     const digitsOnly = value.replace(/\D/g, '')
     
-    // Format as +00 (00) 0000-0000 or +00 (00) 00000-0000 depending on length
+    // Format as +00 (00) 00000-0000 (5 digits before hyphen)
     if (digitsOnly.length <= 2) {
       return digitsOnly
     }
     if (digitsOnly.length <= 4) {
       return `+${digitsOnly.slice(0, 2)} (${digitsOnly.slice(2)}`
     }
-    if (digitsOnly.length <= 8) {
+    if (digitsOnly.length <= 9) {
       return `+${digitsOnly.slice(0, 2)} (${digitsOnly.slice(2, 4)}) ${digitsOnly.slice(4)}`
     }
-    // Format as +00 (00) 00000-0000 or +00 (00) 0000-0000
-    return `+${digitsOnly.slice(0, 2)} (${digitsOnly.slice(2, 4)}) ${digitsOnly.slice(4, 8)}-${digitsOnly.slice(8, 12)}`
+    // Format as +00 (00) 00000-0000
+    return `+${digitsOnly.slice(0, 2)} (${digitsOnly.slice(2, 4)}) ${digitsOnly.slice(4, 9)}-${digitsOnly.slice(9, 13)}`
   }
 
   const formatPhoneForTel = (phone: string): string => {
