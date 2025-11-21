@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const PORT = process.env.PORT || 4000
+const PORT = process.env.PORT || 8080
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
 
 // DB file
