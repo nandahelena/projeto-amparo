@@ -109,28 +109,29 @@ async function initClients() {
 
 const app = express()
 
-// CORS configuration - explicitly allow all origins
+// CORS configuration - allow specific origins only
+const allowedOrigins = [
+  'https://amparobrace.com.br',
+  'https://www.amparobrace.com.br',
+  'http://localhost:3000',
+  'http://localhost:3001',
+]
+
 const corsOptions = {
   origin: function (origin, callback) {
-    callback(null, true)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  preflightContinue: false,
 }
 
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))
-
-// Add manual CORS headers as fallback
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*')
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD')
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept')
-  res.header('Access-Control-Allow-Credentials', 'true')
-  next()
-})
 
 app.use(express.json())
 
