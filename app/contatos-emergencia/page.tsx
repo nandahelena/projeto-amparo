@@ -73,6 +73,15 @@ export default function ContatosEmergenciaPage() {
     }
   }, [])
 
+  useEffect(() => {
+    // Scroll to form when isAddingContact becomes true
+    if (isAddingContact) {
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 50)
+    }
+  }, [isAddingContact])
+
   const saveContacts = (updatedContacts: EmergencyContact[]) => {
     setContacts(updatedContacts)
     // Salvar apenas contatos adicionais (não o principal que vem do settings)
@@ -337,13 +346,7 @@ export default function ContatosEmergenciaPage() {
                   Cadastre pessoas de confiança que serão alertadas em situações de emergência
                 </CardDescription>
               </div>
-              <Button onClick={() => {
-                setIsAddingContact(true)
-                // Smooth scroll after state updates
-                setTimeout(() => {
-                  formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                }, 100)
-              }} className="bg-[#A459D1] hover:bg-purple-600">
+              <Button onClick={() => setIsAddingContact(true)} className="bg-[#A459D1] hover:bg-purple-600">
                 <Plus className="w-4 h-4 mr-2" />
                 Adicionar Contato
               </Button>
@@ -359,10 +362,6 @@ export default function ContatosEmergenciaPage() {
                 </p>
                 <Button onClick={() => {
                   setIsAddingContact(true)
-                  // Smooth scroll after state updates
-                  setTimeout(() => {
-                    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                  }, 100)
                 }} className="bg-[#A459D1] hover:bg-purple-600">
                   <Plus className="w-4 h-4 mr-2" />
                   Adicionar Contato
