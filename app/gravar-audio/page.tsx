@@ -56,8 +56,36 @@ export default function GravarAudioPage() {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream)
+      // Request audio with specific constraints for better mobile compatibility
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
+      })
+      
+      // Try different MIME types for better compatibility
+      const mimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/wav',
+        'audio/ogg',
+      ]
+      
+      let selectedMimeType = ''
+      for (const mimeType of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mimeType)) {
+          selectedMimeType = mimeType
+          break
+        }
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: selectedMimeType || undefined,
+        audioBitsPerSecond: 128000,
+      })
 
       mediaRecorderRef.current = mediaRecorder
       chunksRef.current = []
@@ -69,7 +97,8 @@ export default function GravarAudioPage() {
       }
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "audio/wav" })
+        const mimeType = selectedMimeType || "audio/webm"
+        const blob = new Blob(chunksRef.current, { type: mimeType })
         const now = new Date()
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000)
 
@@ -89,11 +118,27 @@ export default function GravarAudioPage() {
 
         // Parar todas as faixas de áudio
         stream.getTracks().forEach((track) => track.stop())
+        
+        toast({
+          title: "✅ Gravação salva",
+          description: "Seu áudio foi gravado com sucesso.",
+        })
+      }
+
+      mediaRecorder.onerror = (event) => {
+        console.error("MediaRecorder error:", event.error)
+        toast({
+          title: "❌ Erro na gravação",
+          description: "Ocorreu um erro ao gravar. Tente novamente.",
+          variant: "destructive",
+        })
+        setIsRecording(false)
       }
 
       startTimeRef.current = Date.now()
       mediaRecorder.start()
       setIsRecording(true)
+      setCurrentTime("00:00")
 
       // Iniciar timer
       timerRef.current = setInterval(() => {
@@ -102,7 +147,12 @@ export default function GravarAudioPage() {
       }, 1000)
     } catch (error) {
       console.error("Erro ao iniciar gravação:", error)
-      alert("Erro ao acessar o microfone. Verifique as permissões.")
+      const errorMsg = error instanceof Error ? error.message : "Erro desconhecido"
+      toast({
+        title: "❌ Erro ao acessar microfone",
+        description: `${errorMsg}. Verifique as permissões de áudio.`,
+        variant: "destructive",
+      })
     }
   }
 

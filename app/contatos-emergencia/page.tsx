@@ -139,7 +139,7 @@ export default function ContatosEmergenciaPage() {
     }
 
     const confirmSend = confirm(
-      `⚠️ ALERTA DE EMERGÊNCIA\n\nVocê está prestes a enviar alertas para ${contacts.length} contato(s):\n\n${contacts.map(c => `• ${c.name}`).join('\n')}\n\nMensagem:\n"${emergencyMessage}"\n\nDeseja prosseguir?`,
+      `⚠️ ALERTA DE EMERGÊNCIA\n\nVocê está prestes a enviar alertas para ${contacts.length} contato(s):\n\n${contacts.map(c => `• ${c.name}`).join('\n')}\n\nMétodo: WhatsApp + Ligação telefônica\n\nDeseja prosseguir?`,
     )
 
     if (!confirmSend) return
@@ -147,78 +147,70 @@ export default function ContatosEmergenciaPage() {
     setIsSendingAlert(true)
 
     try {
-      const user = getAuthUser()
       const token = localStorage.getItem('projeto-amparo-token')
 
-      if (!token) {
-        toast({
-          title: "Erro de autenticação",
-          description: "Você precisa estar logado para enviar alertas.",
-          variant: "destructive",
+      if (token) {
+        // Tentar registrar no backend
+        await fetch(`${getPublicBackendUrl()}/api/send-alert`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            contacts: contacts.map(c => ({ name: c.name, phone: c.phone })),
+            message: emergencyMessage,
+          }),
+        }).catch(err => {
+          console.log('Backend not available, using fallback')
         })
-        setIsSendingAlert(false)
-        return
       }
 
-      // Enviar para backend
-      const response = await fetch(`${getPublicBackendUrl()}/api/send-alert`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          contacts: contacts.map(c => ({ name: c.name, phone: c.phone })),
-          message: emergencyMessage,
-        }),
+      // Usar WhatsApp + Ligação como método principal garantido
+      toast({
+        title: "🚨 Enviando alertas...",
+        description: `Abrindo WhatsApp e discador para ${contacts.length} contato(s). Confirme cada mensagem.`,
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        toast({
-          title: "✅ Alertas enviados",
-          description: `Mensagens de emergência foram enviadas para ${contacts.length} contato(s). Eles devem ligar ou enviar mensagens em breve.`,
-        })
-
-        // Registrar o envio
-        const alertLog = {
-          timestamp: new Date().toISOString(),
-          contacts: contacts.length,
-          message: emergencyMessage,
-        }
-
-        const logs = JSON.parse(localStorage.getItem("alert-logs") || "[]")
-        logs.push(alertLog)
-        localStorage.setItem("alert-logs", JSON.stringify(logs))
-      } else {
-        // Fallback se o backend não estiver disponível
-        toast({
-          title: "⚠️ Modo offline detectado",
-          description: "Abra manualmente as conversas de WhatsApp com seus contatos para enviar a mensagem de emergência.",
-          variant: "default",
-        })
-
-        // Abrir WhatsApp para cada contato
-        contacts.forEach((contact) => {
+      // Enviar via WhatsApp para todos
+      for (let i = 0; i < contacts.length; i++) {
+        const contact = contacts[i]
+        setTimeout(() => {
+          sendWhatsAppMessage(contact.phone, contact.name)
+          // Após 2 segundos, tentar ligar
           setTimeout(() => {
-            sendWhatsAppMessage(contact.phone, contact.name)
-          }, 500)
-        })
+            const confirmCall = confirm(`Ligar para ${contact.name}?`)
+            if (confirmCall) {
+              callContact(contact.phone)
+            }
+          }, 2000)
+        }, i * 3000) // Espaçar 3 segundos entre cada contato
       }
+
+      // Registrar o envio
+      const alertLog = {
+        timestamp: new Date().toISOString(),
+        contacts: contacts.length,
+        method: 'whatsapp-call',
+        message: emergencyMessage,
+      }
+
+      const logs = JSON.parse(localStorage.getItem("alert-logs") || "[]")
+      logs.push(alertLog)
+      localStorage.setItem("alert-logs", JSON.stringify(logs))
+
+      setTimeout(() => {
+        toast({
+          title: "✅ Alertas iniciados",
+          description: `Verifique que as mensagens de WhatsApp foram enviadas para ${contacts.length} contato(s).`,
+        })
+      }, contacts.length * 3000 + 1000)
     } catch (error) {
       console.error("Erro ao enviar alertas:", error)
       toast({
         title: "Erro ao enviar alertas",
-        description: "Tente novamente ou ligue diretamente para seus contatos.",
+        description: "Ligue diretamente para seus contatos.",
         variant: "destructive",
-      })
-
-      // Fallback: abrir WhatsApp
-      contacts.forEach((contact) => {
-        setTimeout(() => {
-          sendWhatsAppMessage(contact.phone, contact.name)
-        }, 500)
       })
     } finally {
       setIsSendingAlert(false)

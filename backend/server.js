@@ -309,17 +309,35 @@ app.post('/api/send-alert', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Mensagem é obrigatória' })
     }
 
-    // TODO: Integrar com serviço de SMS real (Twilio, AWS SNS, etc)
-    // Por agora, apenas registrar a tentativa
+    // Log alert attempt
     console.log(`[ALERT] User ${req.user.id} enviou alerta para ${contacts.length} contato(s)`)
     console.log(`[ALERT] Contatos: ${contacts.map(c => c.phone).join(', ')}`)
     console.log(`[ALERT] Mensagem: ${message}`)
+
+    // TODO: Integrar com serviço de SMS real:
+    // 1. Twilio (SMS direto)
+    // 2. AWS SNS (SMS direto)
+    // 3. WhatsApp Cloud API (Twilio ou Meta)
+    
+    // Por enquanto, apenas registrar e simular sucesso
+    // Em produção, implementar um dos serviços acima
+    
+    const alertRecord = {
+      userId: req.user.id,
+      timestamp: new Date().toISOString(),
+      contacts: contacts.map(c => ({ name: c.name, phone: c.phone })),
+      message: message,
+      status: 'pending',
+    }
+
+    console.log('[ALERT_RECORD]', JSON.stringify(alertRecord))
 
     // Simular sucesso
     res.json({
       success: true,
       message: `Alerta enviado para ${contacts.length} contato(s)`,
       timestamp: new Date().toISOString(),
+      note: 'SMS integration pending. Use WhatsApp as fallback.',
     })
   } catch (err) {
     console.error('Error sending alert:', err)
