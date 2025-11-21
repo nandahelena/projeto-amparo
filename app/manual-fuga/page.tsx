@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, Share2, Download, Shield } from "lucide-react"
+import { ArrowLeft, Download, Shield } from "lucide-react"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 
 export default function ManualFugaPage() {
@@ -110,36 +110,6 @@ export default function ManualFugaPage() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }
-
-  const handleShare = async () => {
-    try {
-      const blob = await generatePdfBlob()
-      if (!blob) throw new Error('Não foi possível gerar o PDF')
-
-      const file = new File([blob], 'plano-seguranca.pdf', { type: 'application/pdf' })
-
-      if ((navigator as any).canShare && (navigator as any).canShare({ files: [file] })) {
-        await (navigator as any).share({ files: [file], title: 'Meu Plano de Segurança - Projeto Amparo', text: 'Plano de segurança pessoal criado com o Projeto Amparo' })
-        return
-      }
-
-      if (navigator.share) {
-        await navigator.share({ title: 'Meu Plano de Segurança - Projeto Amparo', text: 'Plano de segurança pessoal criado com o Projeto Amparo', url: window.location.href })
-        return
-      }
-
-      await navigator.clipboard.writeText(window.location.href)
-      alert('Link copiado para a área de transferência!')
-    } catch (err) {
-      console.error(err)
-      try {
-        await navigator.clipboard.writeText(window.location.href)
-        alert('Link copiado para a área de transferência!')
-      } catch (_) {
-        alert('Não foi possível compartilhar o plano.')
-      }
-    }
   }
 
   return (
@@ -301,16 +271,10 @@ export default function ManualFugaPage() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button onClick={handleShare} className="bg-[#A459D1] hover:bg-purple-600 flex-1">
-              <Share2 className="w-4 h-4 mr-2" />
-              Compartilhar Plano Seguro
-            </Button>
-            <Button variant="outline" className="flex-1 bg-transparent" onClick={handleDownload}>
-              <Download className="w-4 h-4 mr-2" />
-              Salvar como PDF
-            </Button>
-          </div>
+          <Button onClick={handleDownload} className="w-full bg-[#A459D1] hover:bg-purple-700 text-white py-6 text-lg font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
+            <Download className="w-5 h-5 mr-3" />
+            Salvar Plano como PDF
+          </Button>
 
           <Card className="mt-6 border-orange-200 bg-orange-50">
             <CardContent className="p-4">
