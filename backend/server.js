@@ -254,6 +254,43 @@ app.get('/api/me', authenticate, async (req, res) => {
   }
 })
 
+// Update user profile (PUT /api/me)
+app.put('/api/me', authenticate, async (req, res) => {
+  try {
+    const { fullName, dateOfBirth, city, state, emergencyContact, emergencyPhone } = req.body
+    
+    const updateData = {
+      fullName: fullName || null,
+      dateOfBirth: dateOfBirth || null,
+      city: city || null,
+      state: state || null,
+      emergencyContact: emergencyContact || null,
+      emergencyPhone: emergencyPhone || null,
+    }
+
+    let user
+    if (isPostgres) {
+      await pgClient.query(
+        `UPDATE users SET full_name = $1, date_of_birth = $2, city = $3, state = $4, emergency_contact = $5, emergency_phone = $6 WHERE id = $7`,
+        [updateData.fullName, updateData.dateOfBirth, updateData.city, updateData.state, updateData.emergencyContact, updateData.emergencyPhone, req.user.id]
+      )
+      user = await dbGet('SELECT id, email, full_name as "fullName", date_of_birth as "dateOfBirth", city, state, emergency_contact as "emergencyContact", emergency_phone as "emergencyPhone", created_at as "createdAt" FROM users WHERE id = $1', [req.user.id])
+    } else {
+      await dbRun(
+        `UPDATE users SET full_name = ?, date_of_birth = ?, city = ?, state = ?, emergency_contact = ?, emergency_phone = ? WHERE id = ?`,
+        [updateData.fullName, updateData.dateOfBirth, updateData.city, updateData.state, updateData.emergencyContact, updateData.emergencyPhone, req.user.id]
+      )
+      user = await dbGet('SELECT id, email, full_name as fullName, date_of_birth as dateOfBirth, city, state, emergency_contact as emergencyContact, emergency_phone as emergencyPhone, created_at as createdAt FROM users WHERE id = ?', [req.user.id])
+    }
+
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' })
+    res.json({ user })
+  } catch (err) {
+    console.error('/api/me PUT error:', err)
+    return res.status(500).json({ error: 'Erro interno' })
+  }
+})
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
