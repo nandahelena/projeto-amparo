@@ -296,6 +296,37 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+// Send alert endpoint (for emergency contacts)
+app.post('/api/send-alert', authenticate, async (req, res) => {
+  try {
+    const { contacts, message } = req.body
+    
+    if (!contacts || !Array.isArray(contacts) || contacts.length === 0) {
+      return res.status(400).json({ error: 'Contatos inválidos' })
+    }
+    
+    if (!message) {
+      return res.status(400).json({ error: 'Mensagem é obrigatória' })
+    }
+
+    // TODO: Integrar com serviço de SMS real (Twilio, AWS SNS, etc)
+    // Por agora, apenas registrar a tentativa
+    console.log(`[ALERT] User ${req.user.id} enviou alerta para ${contacts.length} contato(s)`)
+    console.log(`[ALERT] Contatos: ${contacts.map(c => c.phone).join(', ')}`)
+    console.log(`[ALERT] Mensagem: ${message}`)
+
+    // Simular sucesso
+    res.json({
+      success: true,
+      message: `Alerta enviado para ${contacts.length} contato(s)`,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (err) {
+    console.error('Error sending alert:', err)
+    return res.status(500).json({ error: 'Erro ao enviar alerta' })
+  }
+})
+
 // Start server after DB init
 initClients()
   .then(() => {

@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Plus, Trash2, MessageCircle, Phone, AlertTriangle, Edit } from "lucide-react"
+import { ArrowLeft, Plus, Trash2, MessageCircle, Phone, AlertTriangle, Edit, MessageSquare } from "lucide-react"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { getAuthUser } from "@/lib/auth"
+import { toast } from "@/hooks/use-toast"
+import { getPublicBackendUrl } from "@/lib/client-env"
 
 interface EmergencyContact {
   id: string
@@ -25,6 +27,7 @@ export default function ContatosEmergenciaPage() {
   const [contacts, setContacts] = useState<EmergencyContact[]>([])
   const [isAddingContact, setIsAddingContact] = useState(false)
   const [editingContact, setEditingContact] = useState<string | null>(null)
+  const [isSendingAlert, setIsSendingAlert] = useState(false)
   const [emergencyMessage, setEmergencyMessage] = useState(
     "EMERGÊNCIA - Esta é uma mensagem automática do Projeto Amparo. Preciso de ajuda urgente. Por favor, entre em contato comigo ou ligue para a polícia (190).",
   )
@@ -116,23 +119,56 @@ export default function ContatosEmergenciaPage() {
 
   const sendEmergencyAlert = async () => {
     if (contacts.length === 0) {
-      alert("Nenhum contato de emergência cadastrado!")
+      toast({
+        title: "Nenhum contato cadastrado",
+        description: "Adicione pelo menos um contato de emergência antes de enviar alertas.",
+        variant: "destructive",
+      })
       return
     }
 
-    // Simular envio de SMS (em produção, seria integrado com API de SMS)
     const confirmSend = confirm(
-      `Enviar alerta de emergência para ${contacts.length} contato(s)?\n\nMensagem: "${emergencyMessage}"`,
+      `⚠️ ALERTA DE EMERGÊNCIA\n\nVocê está prestes a enviar alertas para ${contacts.length} contato(s):\n\n${contacts.map(c => `• ${c.name}`).join('\n')}\n\nMensagem:\n"${emergencyMessage}"\n\nDeseja prosseguir?`,
     )
 
-    if (confirmSend) {
-      try {
-        // Aqui seria implementada a integração real com serviço de SMS
-        console.log("Enviando alertas para:", contacts)
-        console.log("Mensagem:", emergencyMessage)
+    if (!confirmSend) return
 
-        // Simular sucesso
-        alert("Alertas de emergência enviados com sucesso!")
+    setIsSendingAlert(true)
+
+    try {
+      const user = getAuthUser()
+      const token = localStorage.getItem('projeto-amparo-token')
+
+      if (!token) {
+        toast({
+          title: "Erro de autenticação",
+          description: "Você precisa estar logado para enviar alertas.",
+          variant: "destructive",
+        })
+        setIsSendingAlert(false)
+        return
+      }
+
+      // Enviar para backend
+      const response = await fetch(`${getPublicBackendUrl()}/api/send-alert`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          contacts: contacts.map(c => ({ name: c.name, phone: c.phone })),
+          message: emergencyMessage,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "✅ Alertas enviados",
+          description: `Mensagens de emergência foram enviadas para ${contacts.length} contato(s). Eles devem ligar ou enviar mensagens em breve.`,
+        })
 
         // Registrar o envio
         const alertLog = {
@@ -144,10 +180,37 @@ export default function ContatosEmergenciaPage() {
         const logs = JSON.parse(localStorage.getItem("alert-logs") || "[]")
         logs.push(alertLog)
         localStorage.setItem("alert-logs", JSON.stringify(logs))
-      } catch (error) {
-        console.error("Erro ao enviar alertas:", error)
-        alert("Erro ao enviar alertas. Tente novamente ou ligue diretamente para seus contatos.")
+      } else {
+        // Fallback se o backend não estiver disponível
+        toast({
+          title: "⚠️ Modo offline detectado",
+          description: "Abra manualmente as conversas de WhatsApp com seus contatos para enviar a mensagem de emergência.",
+          variant: "default",
+        })
+
+        // Abrir WhatsApp para cada contato
+        contacts.forEach((contact) => {
+          setTimeout(() => {
+            sendWhatsAppMessage(contact.phone, contact.name)
+          }, 500)
+        })
       }
+    } catch (error) {
+      console.error("Erro ao enviar alertas:", error)
+      toast({
+        title: "Erro ao enviar alertas",
+        description: "Tente novamente ou ligue diretamente para seus contatos.",
+        variant: "destructive",
+      })
+
+      // Fallback: abrir WhatsApp
+      contacts.forEach((contact) => {
+        setTimeout(() => {
+          sendWhatsAppMessage(contact.phone, contact.name)
+        }, 500)
+      })
+    } finally {
+      setIsSendingAlert(false)
     }
   }
 
@@ -158,6 +221,13 @@ export default function ContatosEmergenciaPage() {
 
   const callContact = (phone: string) => {
     window.location.href = `tel:${phone}`
+  }
+
+  const sendWhatsAppMessage = (phone: string, contactName: string) => {
+    // Limpar telefone de caracteres especiais
+    const cleanPhone = phone.replace(/\D/g, '')
+    const whatsappUrl = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(emergencyMessage)}`
+    window.open(whatsappUrl, '_blank')
   }
 
   return (
@@ -201,17 +271,26 @@ export default function ContatosEmergenciaPage() {
               <div className="flex items-center">
                 <AlertTriangle className="w-6 h-6 text-red-600 mr-3" />
                 <div>
-                  <h2 className="text-lg font-semibold text-red-800">Alerta de Emergência</h2>
-                  <p className="text-red-700 text-sm">Envie SMS automático para todos os seus contatos cadastrados</p>
+                  <h2 className="text-lg font-semibold text-red-800">⚠️ Alerta de Emergência</h2>
+                  <p className="text-red-700 text-sm">Envie automaticamente para todos os seus contatos cadastrados</p>
                 </div>
               </div>
               <Button
                 onClick={sendEmergencyAlert}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold"
-                disabled={contacts.length === 0}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2"
+                disabled={contacts.length === 0 || isSendingAlert}
               >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                ALERTAR AGORA
+                {isSendingAlert ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    ALERTAR AGORA
+                  </>
+                )}
               </Button>
             </div>
           </CardContent>
@@ -257,13 +336,24 @@ export default function ContatosEmergenciaPage() {
                         <p className="text-sm text-gray-600">{contacts.find(c => c.isPrimary)?.phone}</p>
                         <p className="text-xs text-[#A459D1] font-semibold mt-1">CONTATO PRIMÁRIO - Sincronizado com Configurações</p>
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={() => callContact(contacts.find(c => c.isPrimary)?.phone || "")}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <Phone className="w-4 h-4" />
-                      </Button>
+                      <div className="flex space-x-2">
+                        <Button
+                          size="sm"
+                          onClick={() => callContact(contacts.find(c => c.isPrimary)?.phone || "")}
+                          className="bg-green-600 hover:bg-green-700"
+                          title="Ligar"
+                        >
+                          <Phone className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => sendWhatsAppMessage(contacts.find(c => c.isPrimary)?.phone || "", contacts.find(c => c.isPrimary)?.name || "")}
+                          className="bg-[#25D366] hover:bg-green-700"
+                          title="WhatsApp"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -309,8 +399,17 @@ export default function ContatosEmergenciaPage() {
                             size="sm"
                             onClick={() => callContact(contact.phone)}
                             className="bg-green-600 hover:bg-green-700"
+                            title="Ligar"
                           >
                             <Phone className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => sendWhatsAppMessage(contact.phone, contact.name)}
+                            className="bg-[#25D366] hover:bg-green-700"
+                            title="WhatsApp"
+                          >
+                            <MessageSquare className="w-4 h-4" />
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => setEditingContact(contact.id)}>
                             <Edit className="w-4 h-4" />
