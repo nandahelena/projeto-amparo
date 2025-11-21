@@ -4,7 +4,9 @@ import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mic, Square, Download, MapPin, Clock } from "lucide-react"
+import { Mic, Square, Download, MapPin, Clock, Edit3, Trash2 } from "lucide-react"
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog'
 import { BackButton } from "@/components/BackButton"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 
@@ -150,6 +152,37 @@ export default function GravarAudioPage() {
     }
   }
 
+  // Rename handling
+  const [renameOpen, setRenameOpen] = useState(false)
+  const [renameTarget, setRenameTarget] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState("")
+
+  const openRename = (rec: AudioRecording) => {
+    setRenameTarget(rec.id)
+    setRenameValue(rec.name)
+    setRenameOpen(true)
+  }
+
+  const confirmRename = () => {
+    if (!renameTarget) return
+    const updated = recordings.map((r) => (r.id === renameTarget ? { ...r, name: renameValue } : r))
+    setRecordings(updated)
+    localStorage.setItem("projeto-amparo-recordings", JSON.stringify(updated))
+    setRenameOpen(false)
+    setRenameTarget(null)
+    setRenameValue("")
+  }
+
+  // Delete handling
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+
+  const confirmDelete = (id: string) => {
+    const updated = recordings.filter((r) => r.id !== id)
+    setRecordings(updated)
+    localStorage.setItem("projeto-amparo-recordings", JSON.stringify(updated))
+    setDeleteTarget(null)
+  }
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
@@ -214,6 +247,43 @@ export default function GravarAudioPage() {
           </CardContent>
         </Card>
 
+        {/* Rename Dialog */}
+        <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+          <DialogContent>
+            <DialogTitle>Renomear Gravação</DialogTitle>
+            <DialogDescription>Altere o nome da gravação e confirme para salvar.</DialogDescription>
+            <div className="mt-4">
+              <input
+                className="w-full border rounded px-3 py-2"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                placeholder="Novo nome da gravação"
+              />
+            </div>
+            <DialogFooter>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setRenameOpen(false)}>Cancelar</Button>
+                <Button onClick={confirmRename}>Salvar</Button>
+              </div>
+            </DialogFooter>
+            <DialogClose />
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete confirmation */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Gravação</AlertDialogTitle>
+              <AlertDialogDescription>Tem certeza que deseja excluir esta gravação? Esta ação não pode ser desfeita.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setDeleteTarget(null)}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteTarget && confirmDelete(deleteTarget)}>Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Histórico de Gravações */}
         <Card>
           <CardHeader>
@@ -252,6 +322,14 @@ export default function GravarAudioPage() {
                       <Button size="sm" variant="outline" onClick={() => downloadRecording(recording)}>
                         <Download className="w-4 h-4 mr-1" />
                         Baixar
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => openRename(recording)}>
+                        <Edit3 className="w-4 h-4 mr-1" />
+                        Renomear
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(recording.id)}>
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Excluir
                       </Button>
                     </div>
                   </div>
