@@ -7,7 +7,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { setAuthToken, getBackendUrl } from '@/lib/auth'
+import { setAuthToken } from '@/lib/auth'
+import { getPublicBackendUrl } from '@/lib/client-env'
 import { useAuthContext } from '@/components/AuthProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -53,7 +54,7 @@ export default function LoginPage() {
       }
 
       // Call backend login
-      const response = await fetch(getBackendUrl('/api/login'), {
+      const response = await fetch(`${getPublicBackendUrl()}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
