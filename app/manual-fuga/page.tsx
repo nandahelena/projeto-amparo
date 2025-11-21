@@ -329,5 +329,5 @@ export default function ManualFugaPage() {
     </ProtectedRoute>
   )
 }
-"use client"
+
 
