@@ -8,6 +8,7 @@ import { Mic, Square, Download, MapPin, Clock, Edit3, Trash2 } from "lucide-reac
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog'
 import { BackButton } from "@/components/BackButton"
+import { toast } from "@/hooks/use-toast"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 
 interface AudioRecording {
@@ -171,6 +172,11 @@ export default function GravarAudioPage() {
     setRenameOpen(false)
     setRenameTarget(null)
     setRenameValue("")
+    try {
+      toast({ title: 'Renomeado', description: 'Nome atualizado com sucesso' })
+    } catch (err) {
+      console.error('Toast error', err)
+    }
   }
 
   // Delete handling
@@ -181,6 +187,11 @@ export default function GravarAudioPage() {
     setRecordings(updated)
     localStorage.setItem("projeto-amparo-recordings", JSON.stringify(updated))
     setDeleteTarget(null)
+    try {
+      toast({ title: 'Excluído', description: 'Gravação removida com sucesso' })
+    } catch (err) {
+      console.error('Toast error', err)
+    }
   }
 
   return (
