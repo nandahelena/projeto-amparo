@@ -171,10 +171,12 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm">
-                <Settings className="w-4 h-4 mr-2" />
-                Configurações
-              </Button>
+              <Link href="/settings">
+                <Button variant="ghost" size="sm">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configurações
+                </Button>
+              </Link>
               <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Sair
